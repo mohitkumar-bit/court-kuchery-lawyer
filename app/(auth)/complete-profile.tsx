@@ -24,6 +24,7 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from "@/contexts/AuthContext";
+import { SPECIALIZATION_OPTIONS } from "@/constants";
 import { AppColors } from "@/constants/theme";
 import { CloudinaryConfig } from "@/constants/cloudinaryConfig";
 
@@ -39,7 +40,7 @@ export default function CompleteProfileScreen() {
     const totalSteps = 3;
 
     // Step 1: Professional Basics
-    const [specialization, setSpecialization] = useState("");
+    const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>([]);
     const [experienceYears, setExperienceYears] = useState("");
     const [ratePerMinute, setRatePerMinute] = useState("");
     const [courtType, setCourtType] = useState<string[]>(["Civil Court"]);
@@ -72,8 +73,13 @@ export default function CompleteProfileScreen() {
 
     const nextStep = () => {
         if (currentStep === 1) {
-            if (!specialization || !experienceYears || !ratePerMinute || courtType.length === 0) {
-                setError("Please fill in all professional details");
+            if (
+                selectedSpecializations.length === 0 ||
+                !experienceYears ||
+                !ratePerMinute ||
+                courtType.length === 0
+            ) {
+                setError("Please select at least one specialization and fill all professional details");
                 return;
             }
         } else if (currentStep === 2) {
@@ -167,7 +173,7 @@ export default function CompleteProfileScreen() {
             setLoading(true);
 
             await completeProfile({
-                specialization: [specialization.toLowerCase()],
+                specialization: selectedSpecializations,
                 experienceYears: Number(experienceYears),
                 ratePerMinute: Number(ratePerMinute),
                 bio,
@@ -257,12 +263,39 @@ export default function CompleteProfileScreen() {
                         <Text style={styles.stepTitle}>Professional Details</Text>
                         <Text style={styles.stepSubtitle}>Let's start with your professional expertise and rates.</Text>
 
-                        <Input
-                            icon="briefcase-outline"
-                            placeholder="Specialization (Criminal, Family, etc.)"
-                            value={specialization}
-                            setValue={setSpecialization}
-                        />
+                        <Text style={[styles.stepSubtitle, { marginBottom: 12 }]}>Select Specialization (Multiple possible)</Text>
+                        <View style={styles.courtTypeContainer}>
+                            {SPECIALIZATION_OPTIONS.map((spec) => (
+                                <TouchableOpacity
+                                    key={spec.value}
+                                    style={[
+                                        styles.courtBadge,
+                                        selectedSpecializations.includes(spec.value) && styles.activeCourtBadge,
+                                    ]}
+                                    onPress={() => {
+                                        if (selectedSpecializations.includes(spec.value)) {
+                                            setSelectedSpecializations(
+                                                selectedSpecializations.filter((s) => s !== spec.value)
+                                            );
+                                        } else {
+                                            setSelectedSpecializations([
+                                                ...selectedSpecializations,
+                                                spec.value,
+                                            ]);
+                                        }
+                                    }}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.courtText,
+                                            selectedSpecializations.includes(spec.value) && styles.activeCourtText,
+                                        ]}
+                                    >
+                                        {spec.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
 
                         <Input
                             icon="time-outline"

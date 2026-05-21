@@ -12,3 +12,9 @@ export function getInitials(name: string): string {
     .toUpperCase()
     .slice(0, 2) || 'U';
 }
+
+export {
+  fetchCurrentLocationDetails,
+  parseStoredLocation,
+} from './geolocation';
+export type { GeoPoint, LocationDetails } from './geolocation';

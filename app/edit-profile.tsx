@@ -15,11 +15,16 @@ import {
     ScrollView,
 } from "react-native";
 
+import { SPECIALIZATION_OPTIONS } from "@/constants";
 import { AppColors } from "@/constants/theme";
 import { useAuth } from "@/contexts";
 import { lawyerService } from "@/services/lawyerService";
+import {
+    fetchCurrentLocationDetails,
+    parseStoredLocation,
+    type GeoPoint,
+} from "@/utils";
 
-const SPECIALIZATIONS = ["criminal", "family", "corporate", "civil", "property"];
 const COURT_TYPES = ["Civil Court", "High Court", "Supreme Court"];
 
 export default function EditProfileScreen() {
@@ -36,7 +41,29 @@ export default function EditProfileScreen() {
     const [address, setAddress] = useState(user?.address || "");
     const [district, setDistrict] = useState(user?.district || "");
     const [state, setState] = useState(user?.state || "");
+    const [location, setLocation] = useState<GeoPoint | undefined>(() =>
+        parseStoredLocation(user?.location as GeoPoint | undefined)
+    );
     const [loading, setLoading] = useState(false);
+    const [fetchingLocation, setFetchingLocation] = useState(false);
+
+    const handleFetchLocation = async () => {
+        setFetchingLocation(true);
+        try {
+            const details = await fetchCurrentLocationDetails();
+            setAddress(details.address);
+            setDistrict(details.district);
+            setState(details.state);
+            setLocation(details.location);
+        } catch (error: any) {
+            Alert.alert(
+                "Location Error",
+                error?.message || "Unable to fetch your current location"
+            );
+        } finally {
+            setFetchingLocation(false);
+        }
+    };
 
     const toggleSpec = (spec: string) => {
         if (selectedSpecs.includes(spec)) {
@@ -62,7 +89,7 @@ export default function EditProfileScreen() {
                 experienceYears: Number(experience),
                 specialization: selectedSpecs,
                 courtType,
-                location: user?.location, // Persist existing lat/lng
+                location,
                 address,
                 district,
                 state,
@@ -161,20 +188,20 @@ export default function EditProfileScreen() {
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Specializations</Text>
                             <View style={styles.chipContainer}>
-                                {SPECIALIZATIONS.map(spec => (
+                                {SPECIALIZATION_OPTIONS.map((spec) => (
                                     <TouchableOpacity
-                                        key={spec}
+                                        key={spec.value}
                                         style={[
                                             styles.chip,
-                                            selectedSpecs.includes(spec) && styles.chipSelected
+                                            selectedSpecs.includes(spec.value) && styles.chipSelected
                                         ]}
-                                        onPress={() => toggleSpec(spec)}
+                                        onPress={() => toggleSpec(spec.value)}
                                     >
                                         <Text style={[
                                             styles.chipText,
-                                            selectedSpecs.includes(spec) && styles.chipTextSelected
+                                            selectedSpecs.includes(spec.value) && styles.chipTextSelected
                                         ]}>
-                                            {spec.charAt(0).toUpperCase() + spec.slice(1)}
+                                            {spec.label}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
@@ -227,7 +254,23 @@ export default function EditProfileScreen() {
                         </View>
 
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Office Address</Text>
+                            <View style={styles.labelRow}>
+                                <Text style={[styles.label, styles.labelInline]}>Office Address</Text>
+                                <TouchableOpacity
+                                    style={styles.locationBtn}
+                                    onPress={handleFetchLocation}
+                                    disabled={fetchingLocation}
+                                >
+                                    {fetchingLocation ? (
+                                        <ActivityIndicator size="small" color={AppColors.primary} />
+                                    ) : (
+                                        <>
+                                            <Ionicons name="navigate" size={16} color={AppColors.primary} />
+                                            <Text style={styles.locationBtnText}>Use current location</Text>
+                                        </>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
                             <View style={[styles.inputContainer, { height: 80, alignItems: 'flex-start', paddingTop: 12 }]}>
                                 <Ionicons name="location-outline" size={20} color="#64748b" style={[styles.inputIcon, { marginTop: 2 }]} />
                                 <TextInput
@@ -330,6 +373,31 @@ const styles = StyleSheet.create({
         color: "#475569",
         marginBottom: 8,
         marginLeft: 4,
+    },
+    labelRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: 8,
+    },
+    labelInline: {
+        marginBottom: 0,
+    },
+    locationBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: AppColors.primaryLight,
+        borderWidth: 1,
+        borderColor: AppColors.primary,
+    },
+    locationBtnText: {
+        fontSize: 12,
+        fontWeight: "700",
+        color: AppColors.primary,
     },
     inputContainer: {
         flexDirection: "row",
